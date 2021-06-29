@@ -27,7 +27,7 @@ namespace Wave
         public TimeSpan DrawSpan = TimeSpan.FromSeconds(10);
         public int TotalCells = 0;
         public int CellsToDraw = 0;
-        public float ValueNormal = 1.0f;
+        public Vector2 UnitVector = Vector2.One;
 
         /// <summary>
         /// Rendered line's vertex to start drawing at for a given frame
@@ -38,12 +38,21 @@ namespace Wave
             DrawCursor = (int)(elapsed.TotalMilliseconds / RenderResolutionTs.TotalMilliseconds);
         }
         /// <summary>
-        /// X: Intervals of RenderResolution
-        /// Y: Normalized value of WavePoint Value
+        /// This vector array describes a series of points that are derived from
+        /// the data provided by WaveSegment. It exploits the WaveSegment.GetValueAt()
+        /// to generate data between points in the WaveSegment.
+        /// 
+        /// [0].X: should only have a value of 0 if the lowest key in the WaveSegment is 0
+        /// [Z].X: is not normalized
+        /// [last].X: should have the last key of WaveSegment
+        /// [Z].Y: should be a value between 0-1;
+        /// X: Convert: WaveSegment.X's (timespan) to Width/(zoom*RenderResolutionPx.X)
+        /// Y: Convert: WaveSegment.GetValueAt() (vector) to Height - Y*(RenderResolutionPx.Y(1/Height))*Height
         /// </summary>
         public Vector2[] RenderSequence;
         //todo: expand to [list] for multi-segment playlist feature
         public WaveSegment WaveSegment;
+        public float Zoom = 1.0f;
 
         //todo: customizable pen
         public Pen LinePen = new Pen(Color.Black);
@@ -65,12 +74,16 @@ namespace Wave
             {
                 Height--;
             }
+            if(Width % 2 == 1)
+            {
+                Width--;
+            }
             WaveSegment.ValueCeiling = WaveSegment.Sequence.Max(s => s.Value);
             //todo: catch events with zoom function and control resizing events
             //refactor: overload TimeSpan./ operator
             TotalCells = (int)Math.Ceiling(WaveSegment.Sequence.Keys.Last() / RenderResolutionTs.TotalMilliseconds);
             CellsToDraw = (int)Math.Ceiling(DrawSpan.TotalMilliseconds / RenderResolutionTs.TotalMilliseconds);
-            ValueNormal = Vector2.Normalize(new Vector2(WaveSegment.Sequence.Keys.Last(), WaveSegment.ValueCeiling)).Y;
+            UnitVector = Vector2.Normalize(new Vector2(WaveSegment.Sequence.Keys.Last(), WaveSegment.ValueCeiling));
             RenderResolutionPx.X = Width / TotalCells;
             RenderResolutionPx.Y = Height / TotalCells;
             //next: transform from native to canvas coordinate system is wrong. something about ambiguous rectangles and a square treeing trying to mix
@@ -80,7 +93,7 @@ namespace Wave
                 for (int x = 0; x < TotalCells; x++)
                 {
                     int currentTime = x * (int)RenderResolutionTs.TotalMilliseconds;
-                    int currentLevel = (int)Math.Ceiling(WaveSegment.GetValueAt(currentTime) * ValueNormal);
+                    int currentLevel = Vector2.Multiply(UnitVector, new Vector2(x, WaveSegment.GetValueAt(currentTime)));
                     RenderSequence[x] = new Vector2(x, currentLevel);
                 }
             }
