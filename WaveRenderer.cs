@@ -46,8 +46,10 @@ namespace Wave
         /// [Z].X: is not normalized
         /// [last].X: should have the last key of WaveSegment
         /// [Z].Y: should be a value between 0-1;
-        /// X: Convert: WaveSegment.X's (timespan) to Width/(zoom*RenderResolutionPx.X)
-        /// Y: Convert: WaveSegment.GetValueAt() (vector) to Height - Y*(RenderResolutionPx.Y(1/Height))*Height
+        /// X: Convert: WaveSegment.X's (timespan) to offset from ...ex: when/on first: x*renderresolutionpx.x*(0||-N1)*
+        ///                     ter having been adjusted to 0-N-End where length of N-N 
+        ///                    is limited to RenderResolutionTs and then map that to the screenspace  Width/(zoom*RenderResolutionPx.X)
+        /// Y: Height - (Value*RenderResolutionPx.Y*Height)
         /// </summary>
         public Vector2[] RenderSequence;
         //todo: expand to [list] for multi-segment playlist feature
@@ -85,22 +87,30 @@ namespace Wave
             CellsToDraw = (int)Math.Ceiling(DrawSpan.TotalMilliseconds / RenderResolutionTs.TotalMilliseconds);
             UnitVector = Vector2.Normalize(new Vector2(WaveSegment.Sequence.Keys.Last(), WaveSegment.ValueCeiling));
             RenderResolutionPx.X = Width / TotalCells;
-            RenderResolutionPx.Y = Height / TotalCells;
-            //next: transform from native to canvas coordinate system is wrong. something about ambiguous rectangles and a square treeing trying to mix
+            RenderResolutionPx.Y = 1 / WaveSegment.ValueCeiling;
+            
             RenderSequence = new Vector2[TotalCells];
             try
             {
                 for (int x = 0; x < TotalCells; x++)
-                {
+                { 
                     int currentTime = x * (int)RenderResolutionTs.TotalMilliseconds;
-                    int currentLevel = Vector2.Multiply(UnitVector, new Vector2(x, WaveSegment.GetValueAt(currentTime)));
-                    RenderSequence[x] = new Vector2(x, currentLevel);
+                    //todo: check for ntree connection in following
+                    //next: check and see if I'm supposed to be using a normal here or what. see paper notes as backup if lost
+                    var heading currentLevel = WaveSegment.GetValueAt(currentTime);
+                    RenderSequence[x] = new Vector2(currentTime, currentLevel);
                 }
             }
             catch (Exception ex)
             {
                 throw new Exception("todo:Add proper error messaging.", ex);
             }
+        }
+
+        private Matrix4x4 TransformaationMatrix(Vector2 a, Vector2 b)
+        {
+
+            return Matrix4x4.Identity;
         }
 
         private void WaveRender_Paint(object sender, PaintEventArgs e)

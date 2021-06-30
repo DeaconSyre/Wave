@@ -54,23 +54,22 @@ namespace Wave
             return Sequence.IndexOfKey(Sequence.First(v => v.Key >= time).Key);
         }
 
-        public float GetValueAt(int time)
+        public Vector2 GetValueAt(int time)
         {
             if(time < 0.0f || time > Sequence.Last().Key) {
-                return -1;
+                throw new Exception("Seriously can't render backwards yet.");
             }
             else if (Sequence.ContainsKey(time))
             {
-                return Sequence[time];
+                return new Vector2(time, Sequence[time]);
             }
 
             var lowerboundkey = Sequence.Keys[IndexLeftOf(time)];
             var upperboundkey = Sequence.Keys[IndexRightOf(time)];
-            var upperbound = Sequence[upperboundkey];
-            var lowerbound = Sequence[lowerboundkey];
-
-            var stepline = (upperbound - lowerbound) * ((upperboundkey - lowerboundkey) / (time - lowerboundkey));
-            return lowerbound + stepline;
+            Vector2 lowerbound = new Vector2(lowerboundkey, Sequence[lowerboundkey]);
+            Vector2 upperbound = new Vector2(upperboundkey, Sequence[upperboundkey]);
+            Vector2 slope = upperbound - lowerbound;
+            return slope;
         }
     }
 }
