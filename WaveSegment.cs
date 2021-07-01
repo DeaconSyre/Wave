@@ -54,14 +54,14 @@ namespace Wave
             return Sequence.IndexOfKey(Sequence.First(v => v.Key >= time).Key);
         }
 
-        public Vector2 GetValueAt(int time)
+        public Vector2 GetSlopeAt(int time)
         {
             if(time < 0.0f || time > Sequence.Last().Key) {
                 throw new Exception("Seriously can't render backwards yet.");
             }
             else if (Sequence.ContainsKey(time))
             {
-                return new Vector2(time, Sequence[time]);
+                return -Vector2.UnitX + new Vector2(time, Sequence[time]);
             }
 
             var lowerboundkey = Sequence.Keys[IndexLeftOf(time)];

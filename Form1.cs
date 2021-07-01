@@ -2,11 +2,13 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Xml.Schema;
 
 namespace Wave
 {
@@ -24,13 +26,15 @@ namespace Wave
             cont.Size = cont.Parent.Size;
 
             WaveSegment seg = new WaveSegment();
-            for(int x = 0; x <= 10; x++)
-            {
-                seg.Sequence.Add(x*1000, x);
-            }
+            seg.Sequence.Add(0, 0);
+            seg.Sequence.Add(10000, 10);
 
             cont.WaveSegment = seg;
             cont.InitConstants();
+            for(int x =0; x < cont.RenderSequence.Length;x++)
+            {
+                DebugTxtBx.Text += cont.RenderSequence[x].ToString() + " ";
+            }
         }
     }
 }

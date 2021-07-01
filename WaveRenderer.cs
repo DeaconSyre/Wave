@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Forms;
 using System.Xml.Schema;
 using System.Numerics;
+using System.Data.Common;
 
 namespace Wave
 {
@@ -20,14 +21,15 @@ namespace Wave
         /// </summary>
         public TimeSpan RenderResolutionTs = TimeSpan.FromMilliseconds(256);
         /// <summary>
-        /// Width of a cell in px
+        /// x: Width of a cell in px
+        /// y: Scale of value/valueceiling at x (0-1)
         /// </summary>
         private Vector2 RenderResolutionPx;
 
         public TimeSpan DrawSpan = TimeSpan.FromSeconds(10);
         public int TotalCells = 0;
         public int CellsToDraw = 0;
-        public Vector2 UnitVector = Vector2.One;
+        public Vector2 ValueNormal = Vector2.One;
 
         /// <summary>
         /// Rendered line's vertex to start drawing at for a given frame
@@ -38,6 +40,7 @@ namespace Wave
             DrawCursor = (int)(elapsed.TotalMilliseconds / RenderResolutionTs.TotalMilliseconds);
         }
         /// <summary>
+        /// //todo: update
         /// This vector array describes a series of points that are derived from
         /// the data provided by WaveSegment. It exploits the WaveSegment.GetValueAt()
         /// to generate data between points in the WaveSegment.
@@ -85,20 +88,19 @@ namespace Wave
             //refactor: overload TimeSpan./ operator
             TotalCells = (int)Math.Ceiling(WaveSegment.Sequence.Keys.Last() / RenderResolutionTs.TotalMilliseconds);
             CellsToDraw = (int)Math.Ceiling(DrawSpan.TotalMilliseconds / RenderResolutionTs.TotalMilliseconds);
-            UnitVector = Vector2.Normalize(new Vector2(WaveSegment.Sequence.Keys.Last(), WaveSegment.ValueCeiling));
-            RenderResolutionPx.X = Width / TotalCells;
+            ValueNormal = Vector2.Normalize(new Vector2(WaveSegment.Sequence.Keys.Last(), WaveSegment.ValueCeiling));
+            RenderResolutionPx.X = Width / TotalCells;//next: is this right?
             RenderResolutionPx.Y = 1 / WaveSegment.ValueCeiling;
             
             RenderSequence = new Vector2[TotalCells];
             try
             {
+                Vector2 slope = Vector2.Zero;
                 for (int x = 0; x < TotalCells; x++)
-                { 
-                    int currentTime = x * (int)RenderResolutionTs.TotalMilliseconds;
+                {
                     //todo: check for ntree connection in following
-                    //next: check and see if I'm supposed to be using a normal here or what. see paper notes as backup if lost
-                    var heading currentLevel = WaveSegment.GetValueAt(currentTime);
-                    RenderSequence[x] = new Vector2(currentTime, currentLevel);
+                    slope = WaveSegment.GetSlopeAt(x * (int)RenderResolutionTs.TotalMilliseconds);
+                    RenderSequence[x] = slope;
                 }
             }
             catch (Exception ex)
@@ -127,11 +129,17 @@ namespace Wave
 
                 var length = CellsToDraw - DrawCursor;
 
-                for (int x = 0; x < length-1; x++)
+                int cursorhead = 0;
+                if(RenderSequence.Length > 0 && RenderSequence[0].X <= 0)
                 {
-                    startpoint.Y = Height - (int)RenderSequence[x].Y;
-                    endpoint.X += (int)RenderResolutionPx.X;
-                    endpoint.Y = Height - (int)RenderSequence[x + 1].Y;
+                    cursorhead++;
+                }
+
+                for (int x = 0 + cursorhead; x < length-1; x++)
+                {
+                    startpoint.Y += (int)Math.Round(Height - RenderSequence[x].Y / RenderResolutionPx.Y);
+                    endpoint.X += startpoint.X + (int)RenderResolutionPx.X;
+                    endpoint.Y += (int)Math.Round(Height - RenderSequence[x + 1].Y / RenderResolutionPx.Y);
 
                     canvas.DrawLine(LinePen, startpoint, endpoint);
 
